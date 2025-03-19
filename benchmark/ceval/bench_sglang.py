@@ -150,7 +150,7 @@ def main(args):
     # Write results
     with open(args.result_file, "a") as fout:
         value = {
-            "task": "mmlu",
+            "task": "ceval",
             "backend": args.backend,
             "num_gpus": 1,
             "latency": round(latency, 3),
