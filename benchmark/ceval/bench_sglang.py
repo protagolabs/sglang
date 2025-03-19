@@ -51,9 +51,9 @@ def gen_prompt(train_df, subject, k=-1):
 def main(args):
     subjects = sorted(
         [
-            f.split("_test.csv")[0]
-            for f in os.listdir(os.path.join(args.data_dir, "test"))
-            if "_test.csv" in f
+            f.split("_val.csv")[0]
+            for f in os.listdir(os.path.join(args.data_dir, "val"))
+            if "_val.csv" in f
         ]
     )
 
