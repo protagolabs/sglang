@@ -122,9 +122,9 @@ def call_completions_llamacpp(prompt, temperature, max_tokens, stop=None, n=1, u
     res = requests.post(url, json=data)
     assert res.status_code == 200
     if n == 1:
-        pred = res.json()["choices"][0]["text"][len(prompt) :]
+        pred = res.json()["choices"][0]["text"]
     else:
-        pred = [x[len(prompt) :] for x in res.json()["choices"][0]["text"]]
+        pred = [x["text"] for x in res.json()["choices"]]
     return pred
 
 
