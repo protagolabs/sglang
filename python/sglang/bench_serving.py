@@ -1275,6 +1275,12 @@ def run_benchmark(args_: argparse.Namespace):
             if args.base_url
             else f"http://{args.host}:{args.port}/v1/completions"
         )
+    elif args.backend in ["ktrans"]:
+        api_url = (
+            f"{args.base_url}/v1/chat/completions"
+            if args.base_url
+            else f"http://{args.host}:{args.port}/v1/chat/completions"
+        )
     elif args.backend == "trt":
         api_url = (
             f"{args.base_url}/v2/models/ensemble/generate_stream"

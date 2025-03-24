@@ -109,6 +109,24 @@ def call_generate_vllm(prompt, temperature, max_tokens, stop=None, n=1, url=None
         pred = [x[len(prompt) :] for x in res.json()["text"]]
     return pred
 
+def call_completions_llamacpp(prompt, temperature, max_tokens, stop=None, n=1, url=None):
+    assert url is not None
+
+    data = {
+        "prompt": prompt,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stop": stop,
+        "n": n,
+    }
+    res = requests.post(url, json=data)
+    assert res.status_code == 200
+    if n == 1:
+        pred = res.json()["choices"][0]["text"][len(prompt) :]
+    else:
+        pred = [x[len(prompt) :] for x in res.json()["choices"][0]["text"]]
+    return pred
+
 
 def call_generate_outlines(
     prompt, temperature, max_tokens, stop=None, regex=None, n=1, url=None
@@ -286,6 +304,8 @@ def _get_call_generate(args: argparse.Namespace):
         return partial(call_generate_lightllm, url=f"{args.host}:{args.port}/generate")
     elif args.backend == "vllm":
         return partial(call_generate_vllm, url=f"{args.host}:{args.port}/generate")
+    elif args.backend == "llama.cpp":
+        return partial(call_completions_llamacpp, url=f"{args.host}:{args.port}/v1/completions")
     elif args.backend == "srt-raw":
         return partial(call_generate_srt_raw, url=f"{args.host}:{args.port}/generate")
     elif args.backend == "gserver":
