@@ -167,7 +167,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ntrain", "-k", type=int, default=5)
-    parser.add_argument("--data_dir", "-d", type=str, default="/Users/yizhou/code/sglang/benchmark/ceval/ceval_data")
+    parser.add_argument("--data_dir", "-d", type=str, default="sglang/benchmark/ceval/ceval_data")
     parser.add_argument("--save_dir", "-s", type=str, default="results")
     parser.add_argument("--nsub", type=int, default=60)
     args = add_common_sglang_args_and_parse(parser)

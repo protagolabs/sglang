@@ -122,6 +122,7 @@ def call_completions_llamacpp(prompt, temperature, max_tokens, stop=None, n=1, u
     assert url is not None
 
     data = {
+        "model": "",
         "prompt": prompt,
         "temperature": temperature,
         "max_tokens": max_tokens,
@@ -134,6 +135,26 @@ def call_completions_llamacpp(prompt, temperature, max_tokens, stop=None, n=1, u
         pred = res.json()["choices"][0]["text"]
     else:
         pred = [x["text"] for x in res.json()["choices"]]
+    return pred
+
+
+def call_completions_ktrans(prompt, temperature, max_tokens, stop=None, n=1, url=None):
+    assert url is not None
+
+    data = {
+        "model": "",
+        "prompt": prompt,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stop": stop,
+        "n": n,
+    }
+    res = requests.post(url, json=data)
+    assert res.status_code == 200
+    if n == 1:
+        pred = res.json()["choices"][0]["text"][len(prompt) :]
+    else:
+        pred = [x["text"][len(prompt) :] for x in res.json()["choices"]]
     return pred
 
 
@@ -265,6 +286,7 @@ def add_common_other_args_and_parse(parser: argparse.ArgumentParser):
             "guidance",
             "srt-raw",
             "llama.cpp",
+            "ktrans"
         ],
     )
     parser.add_argument("--n-ctx", type=int, default=4096)
@@ -315,6 +337,8 @@ def _get_call_generate(args: argparse.Namespace):
         return partial(call_generate_vllm, url=f"{args.host}:{args.port}/generate")
     elif args.backend == "llama.cpp":
         return partial(call_completions_llamacpp, url=f"{args.host}:{args.port}/v1/completions")
+    elif args.backend == "ktrans":
+        return partial(call_completions_ktrans, url=f"{args.host}:{args.port}/v1/completions")
     elif args.backend == "srt-raw":
         return partial(call_generate_srt_raw, url=f"{args.host}:{args.port}/generate")
     elif args.backend == "gserver":

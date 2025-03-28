@@ -58,8 +58,6 @@ def gen_prompt(train_df, subject, k=-1):
 
 
 def main(args):
-    set_default_backend(select_sglang_backend(args))
-
     lines = list(read_jsonl(args.data_path))
     num_questions = args.num_questions
     questions = []
