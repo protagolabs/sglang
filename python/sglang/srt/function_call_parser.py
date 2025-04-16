@@ -535,6 +535,53 @@ class DeepSeekV3Detector(BaseFormatDetector):
             trigger="<｜tool▁calls▁begin｜>",
         )
 
+    def parse_streaming_increment(
+        self, new_text: str, tools: List[Tool]
+    ) -> StreamingParseResult:
+        """
+        Streaming incremental parsing tool calls for DeepSeekV3 format.
+        """
+        self._buffer += new_text
+        current_text = self._buffer
+
+        if self.bot_token not in current_text:
+            self._buffer = ""
+            if self.eot_token in new_text:
+                new_text = new_text.replace(self.eot_token, "")
+            return StreamingParseResult(normal_text=new_text)
+
+        calls: list[ToolCallItem] = []
+        try:
+            if self.eot_token in current_text:
+                match_result_list = re.findall(
+                    self.func_call_regex, current_text, re.DOTALL
+                )
+                for match_result in match_result_list:
+                    func_detail = re.search(
+                        self.func_detail_regex, match_result, re.DOTALL
+                    )
+                    if not func_detail:
+                        continue
+                    func_name = func_detail.group(2).strip()
+                    func_args_raw = func_detail.group(3).strip()
+
+                    try:
+                        func_args_json = json.loads(func_args_raw)
+                        tool_call = {"name": func_name, "parameters": func_args_json}
+                        calls.extend(self.parse_base_json(tool_call, tools))
+                    except json.JSONDecodeError:
+                        logger.warning("JSON decode failed for streamed tool args")
+                        continue
+
+                self._buffer = ""
+                return StreamingParseResult(normal_text="", calls=calls)
+
+            return StreamingParseResult()
+
+        except Exception as e:
+            logger.error(f"Error in parse_streaming_increment: {e}")
+            return StreamingParseResult(normal_text=current_text)
+
 
 class MultiFormatParser:
     def __init__(self, detectors: List[BaseFormatDetector]):
