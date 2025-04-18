@@ -946,7 +946,7 @@ def v1_chat_generate_request(
                     openai_compatible_messages.append(
                         {
                             "role": "system",
-                            "content": """
+                            "content": """You are a helpful Assistant.
                     ## Tools
                     ### Function
                     You have the following functions available:
@@ -965,7 +965,7 @@ def v1_chat_generate_request(
                         }
                     )
                     # TODO fix the compatible issues with xgrammar
-                    strict_tag = None
+                    # strict_tag = None
 
                 for message in request.messages:
                     if isinstance(message.content, str):

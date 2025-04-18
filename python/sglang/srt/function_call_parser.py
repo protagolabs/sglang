@@ -528,11 +528,9 @@ class DeepSeekV3Detector(BaseFormatDetector):
 
     def structure_info(self) -> _GetInfoFunc:
         return lambda name: StructureInfo(
-            begin="<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>function<｜tool▁sep｜>"
-            + name
-            + "\n```json\n",
-            end="\n```<｜tool▁call▁end｜><｜tool▁calls▁end｜>",
-            trigger="<｜tool▁calls▁begin｜>",
+            begin=">" + name + "\n```json\n",
+            end="\n```<",
+            trigger=">" + name + "\n```json\n",
         )
 
     def parse_streaming_increment(
@@ -546,37 +544,45 @@ class DeepSeekV3Detector(BaseFormatDetector):
 
         if self.bot_token not in current_text:
             self._buffer = ""
-            if self.eot_token in new_text:
-                new_text = new_text.replace(self.eot_token, "")
+            for e_token in [self.eot_token, "```", "<｜tool▁call▁end｜>"]:
+                if e_token in new_text:
+                    new_text = new_text.replace(e_token, "")
             return StreamingParseResult(normal_text=new_text)
 
+        if not hasattr(self, "_tool_indices"):
+            self._tool_indices = {
+                tool.function.name: i
+                for i, tool in enumerate(tools)
+                if tool.function and tool.function.name
+            }
         calls: list[ToolCallItem] = []
         try:
-            if self.eot_token in current_text:
-                match_result_list = re.findall(
-                    self.func_call_regex, current_text, re.DOTALL
-                )
-                for match_result in match_result_list:
-                    func_detail = re.search(
-                        self.func_detail_regex, match_result, re.DOTALL
+            partial_match = re.search(
+                pattern=r"<｜tool▁call▁begin｜>(.*)<｜tool▁sep｜>(.*)\n```json\n(.*)",
+                string=current_text,
+                flags=re.DOTALL,
+            )
+            if partial_match:
+                func_name = partial_match.group(2).strip()
+                func_args_raw = partial_match.group(3).strip()
+
+                try:
+                    partial_obj, _ = _partial_json_loads(func_args_raw, Allow.ALL)
+                    json_prefix = json.dumps(partial_obj, ensure_ascii=False)
+                    calls.append(
+                        ToolCallItem(
+                            tool_index=self._tool_indices[func_name],
+                            name=func_name,
+                            parameters=json_prefix,
+                        )
                     )
-                    if not func_detail:
-                        continue
-                    func_name = func_detail.group(2).strip()
-                    func_args_raw = func_detail.group(3).strip()
+                    if _is_complete_json(func_args_raw):
+                        self._buffer = ""
+                        return StreamingParseResult()
+                except Exception as e:
+                    logger.error(f"Partial parse failed for incomplete JSON block: {e}")
 
-                    try:
-                        func_args_json = json.loads(func_args_raw)
-                        tool_call = {"name": func_name, "parameters": func_args_json}
-                        calls.extend(self.parse_base_json(tool_call, tools))
-                    except json.JSONDecodeError:
-                        logger.warning("JSON decode failed for streamed tool args")
-                        continue
-
-                self._buffer = ""
-                return StreamingParseResult(normal_text="", calls=calls)
-
-            return StreamingParseResult()
+            return StreamingParseResult(normal_text="", calls=calls)
 
         except Exception as e:
             logger.error(f"Error in parse_streaming_increment: {e}")
