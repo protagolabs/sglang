@@ -595,10 +595,11 @@ class DeepSeekV3Detector(BaseFormatDetector):
                         self._last_arguments += argument_diff
 
                     if _is_complete_json(func_args_raw):
+                        result = StreamingParseResult(normal_text="", calls=calls)
                         self._buffer = ""
                         self._last_arguments = ""
                         self.current_tool_name_sent = False
-                        return StreamingParseResult()
+                        return result
 
             return StreamingParseResult(normal_text="", calls=calls)
 
