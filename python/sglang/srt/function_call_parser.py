@@ -491,6 +491,7 @@ class DeepSeekV3Detector(BaseFormatDetector):
         self.eot_token = "<｜tool▁calls▁end｜>"
         self.func_call_regex = r"<｜tool▁call▁begin｜>.*?<｜tool▁call▁end｜>"
         self.func_detail_regex = r"<｜tool▁call▁begin｜>(.*)<｜tool▁sep｜>(.*)\n```json\n(.*)\n```<｜tool▁call▁end｜>"
+        self._last_arguments = ""
 
     def has_tool_call(self, text: str) -> bool:
         """Check if the text contains a deepseek format tool call."""
@@ -555,6 +556,7 @@ class DeepSeekV3Detector(BaseFormatDetector):
                 for i, tool in enumerate(tools)
                 if tool.function and tool.function.name
             }
+
         calls: list[ToolCallItem] = []
         try:
             partial_match = re.search(
@@ -566,21 +568,37 @@ class DeepSeekV3Detector(BaseFormatDetector):
                 func_name = partial_match.group(2).strip()
                 func_args_raw = partial_match.group(3).strip()
 
-                try:
-                    partial_obj, _ = _partial_json_loads(func_args_raw, Allow.ALL)
-                    json_prefix = json.dumps(partial_obj, ensure_ascii=False)
+                if not self.current_tool_name_sent:
                     calls.append(
                         ToolCallItem(
-                            tool_index=self._tool_indices[func_name],
+                            tool_index=self._tool_indices.get(func_name, 0),
                             name=func_name,
-                            parameters=json_prefix,
+                            parameters="",
                         )
                     )
+                    self.current_tool_name_sent = True
+                else:
+                    argument_diff = (
+                        func_args_raw[len(self._last_arguments) :]
+                        if func_args_raw.startswith(self._last_arguments)
+                        else func_args_raw
+                    )
+
+                    if argument_diff:
+                        calls.append(
+                            ToolCallItem(
+                                tool_index=self._tool_indices.get(func_name, 0),
+                                name=None,
+                                parameters=argument_diff,
+                            )
+                        )
+                        self._last_arguments += argument_diff
+
                     if _is_complete_json(func_args_raw):
                         self._buffer = ""
+                        self._last_arguments = ""
+                        self.current_tool_name_sent = False
                         return StreamingParseResult()
-                except Exception as e:
-                    logger.error(f"Partial parse failed for incomplete JSON block: {e}")
 
             return StreamingParseResult(normal_text="", calls=calls)
 
