@@ -200,6 +200,7 @@ data: {"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"\":\""}}]}}]
 data: {"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"Q"}}]}}]}
 data: {"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"ing"}}]}}]}
 data: {"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"dao"}}]}}]}
+data: {"choices":[{"delta":{"tool_calls":[{"function":{"arguments":"\"}"}}]}}]}
 data: {"choices":[{"delta":{"tool_calls":null}}], "finish_reason": "tool_calls"}
 data: [DONE]
 ```
